@@ -32,7 +32,7 @@ def get_last_roll():
     last_roll = soup.find("div", {"class": "sm-box"})
     color = str(last_roll['class'][1])
     number = str(last_roll.text)
-    line = color+", "+number
+    line = color+"\t"+number
     return line
 
 def get_state_roll():
@@ -46,14 +46,24 @@ def get_timestamp():
     now = datetime.now()
     return now.strftime("%d/%m/%Y %H:%M:%S")
 
+def write_to_file(row):
+    file = open("blaze-result.txt", "a")
+    file.write(row)
+
 while True:
     if WebDriverWait(driver, 50).until(EC.text_to_be_present_in_element((By.XPATH, '//*[@id="roulette-timer"]/div[1]'), "Blaze Girou")):
+        timestamp = get_timestamp()
+        state_roll = get_state_roll()
+        timer = get_timer()
+        last_roll = get_last_roll()
         print("\n")
-        print(get_state_roll())
-        print(get_timer())
-        print(get_last_roll())
-        print(get_timestamp())
-        sleep(10)    
+        print(state_roll)
+        print(timer)
+        print(last_roll)
+        print(timestamp)
+        data_row = timestamp+'\t'+state_roll+'\t'+timer+'\t'+last_roll+'\n'
+        write_to_file(data_row)
+        sleep(10)   
 
 
 

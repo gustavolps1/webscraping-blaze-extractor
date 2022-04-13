@@ -8,16 +8,19 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from time import sleep
 from datetime import datetime
+from selenium.common.exceptions import TimeoutException
 
 chrome_options = Options()
 chrome_options.add_argument('--log-level=3')
 chrome_options.headless = True
 
-print("Loading webpage ...")
+host = "https://blaze.com/pt/games/double"
+storage_path = "storage/"
 driver = webdriver.Chrome(executable_path="chromedriver.exe", options=chrome_options)
-driver.get('https://blaze.com/pt/games/double')
+print("Starting BlazeExtractor on "+host+" ...")
+driver.get(host)
 sleep(1)
- 
+
 def get_timer():
     timer = driver.find_element(by=By.XPATH, value='//*[@id="roulette-timer"]/div/div[2]/span')
     timer_html = timer.get_attribute('outerHTML')
@@ -46,24 +49,49 @@ def get_timestamp():
     now = datetime.now()
     return now.strftime("%d/%m/%Y %H:%M:%S")
 
-def write_to_file(row):
-    file = open("blaze-result.txt", "a")
+
+def get_file_name():
+    now = datetime.now()
+    formated_now = now.strftime("%d-%m-%Y_%H.%M.%S")
+    return "blaze-dataset-"+formated_now+".txt"
+
+def write_to_file(file_name, row):
+    file = open(storage_path+file_name, "a")
     file.write(row)
 
-while True:
-    if WebDriverWait(driver, 50).until(EC.text_to_be_present_in_element((By.XPATH, '//*[@id="roulette-timer"]/div[1]'), "Blaze Girou")):
-        timestamp = get_timestamp()
-        state_roll = get_state_roll()
-        timer = get_timer()
-        last_roll = get_last_roll()
-        print("\n")
-        print(state_roll)
-        print(timer)
-        print(last_roll)
-        print(timestamp)
-        data_row = timestamp+'\t'+state_roll+'\t'+timer+'\t'+last_roll+'\n'
-        write_to_file(data_row)
-        sleep(10)   
+def restart():
+    print("Restarting BlazeExtractor ...")
+    print("Reconnecting on "+host+" ...")
+    driver.get(host)
+    sleep(2)
+    start()
+
+def print_data_row(state_roll, timer, last_roll, timestamp):
+    print("\n")
+    print(state_roll)
+    print(timer)
+    print(last_roll)
+    print(timestamp)
+
+def start():
+    file_name = get_file_name()
+    print("BlazeExtractor is running! :)")
+    while True:
+        try:
+            if WebDriverWait(driver, 150).until(EC.text_to_be_present_in_element((By.XPATH, '//*[@id="roulette-timer"]/div[1]'), "Blaze Girou")):
+                timestamp = get_timestamp()
+                state_roll = get_state_roll()
+                timer = get_timer()
+                last_roll = get_last_roll()
+                print_data_row(state_roll, timer, last_roll, timestamp)
+                data_row = timestamp+'\t'+state_roll+'\t'+timer+'\t'+last_roll+'\n'
+                write_to_file(file_name, data_row)
+                sleep(10)   
+        except TimeoutException:
+                print('Connection lost. Trying to reconnect ...')
+                restart()
+
+start()
 
 
 
